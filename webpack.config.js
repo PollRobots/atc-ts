@@ -1,10 +1,12 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === "production";
 
   const distPath = path.join(__dirname, "/dist");
+  const srcPath = path.join(__dirname, "/src");
 
   return {
     entry: "./src/index.tsx",
@@ -45,6 +47,15 @@ module.exports = (env, argv) => {
           test: /\.js$/,
           loader: "source-map-loader",
         },
+        {
+          test: /\.css$/i,
+          include: srcPath,
+          use: [
+            isProduction ? MiniCssExtractPlugin.loader : "style-loader",
+            "css-loader",
+            "postcss-loader",
+          ],
+        },
       ],
     },
 
@@ -56,6 +67,13 @@ module.exports = (env, argv) => {
         filename: "atc-ts.html",
         template: "index.template.html",
       }),
+      ...(isProduction
+        ? [
+            new MiniCssExtractPlugin({
+              filename: "atc-ts.[contenthash].css",
+            }),
+          ]
+        : []),
     ],
 
     optimization: {
