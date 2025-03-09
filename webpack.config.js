@@ -56,6 +56,10 @@ module.exports = (env, argv) => {
             "postcss-loader",
           ],
         },
+        {
+          test: /\/games\/.*$/,
+          type: "asset/source",
+        },
       ],
     },
 
