@@ -193,8 +193,19 @@ export class CommandProcessor {
     }
   }
 
+  get skipState() {
+    return this.topState === 0;
+  }
+
   get display() {
     return this.stack.map((stack) => stack.str).join("");
+  }
+
+  get options(): { token: string; str: string }[] {
+    const rules = st[this.topState] ?? [];
+    return rules
+      .map((rule) => ({ token: rule.token, str: rule.str }))
+      .filter(({ token }) => token !== "?");
   }
 
   applyCommand(
@@ -204,6 +215,7 @@ export class CommandProcessor {
   ):
     | { type: "error"; message: string }
     | { type: "update"; plane: Plane }
+    | { type: "skip" }
     | undefined {
     if (this.topState !== -1) {
       return;
@@ -231,7 +243,7 @@ export class CommandProcessor {
     if (updated) {
       return { type: "update", plane: updated };
     }
-    return { type: "error", message: "Internal error" };
+    return { type: "skip" };
   }
 }
 

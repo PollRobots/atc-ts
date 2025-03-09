@@ -6,13 +6,15 @@ import { addPlane, Loss, planeName, update } from "./update";
 import { Button } from "./controls";
 import { Planes } from "./planes";
 import { CommandProcessor } from "./input";
+import { Instructions } from "./instructions";
+import { CommandOptions } from "./commandoptions";
 
 type GameState = {
   screen: ScreenDefinition;
-  air: Plane[];
-  ground: Plane[];
   clock: number;
   safePlanes: number;
+  air: Plane[];
+  ground: Plane[];
 };
 
 export function App() {
@@ -30,56 +32,111 @@ export function App() {
   const [game, setGame] = React.useState(gameNames[0] ?? "Unknown");
   const gamesId = React.useId();
 
+  const [startTime, setStartTime] = React.useState(0);
+  const [skipped, setSkipped] = React.useState(0);
   const [gameState, setGameState] = React.useState(
     initGame(defaultGame(), false)
   );
   const [playing, setPlaying] = React.useState(false);
+  const [instructions, setInstructions] = React.useState(false);
   const [lost, setLost] = React.useState<Loss>();
 
-  React.useEffect(() => {
-    const gameState = initGame(game, playing);
-    setGameState(gameState);
-    if (playing) {
-      setTimeout(
-        () => onTick(gameState),
-        gameState.screen.updateSeconds * 1000
-      );
-    }
-  }, [game, playing]);
+  const changeGame = React.useCallback(
+    (update: string) => {
+      if (playing) {
+        console.error(`It should not be possible to change game while playing`);
+        return;
+      }
+      try {
+        const newGameState = initGame(update, false);
+        setGame(update);
+        setGameState(newGameState);
+      } catch (err) {
+        console.error(`Error changing game to '${update}': ${err}`);
+      }
+    },
+    [playing]
+  );
 
-  const onTick = React.useCallback((gameState: GameState) => {
-    const clonedState: GameState = JSON.parse(JSON.stringify(gameState));
+  const startPlaying = React.useCallback(() => {
+    try {
+      const newGameState = initGame(game, true);
+      setGameState(newGameState);
+      setSkipped(0);
+      setStartTime(Date.now());
+      setPlaying(true);
+    } catch (err) {
+      console.error(`Error starting game '${game}': ${err}`);
+    }
+  }, [game]);
+
+  const updateGame = React.useCallback(() => {
+    if (!playing) {
+      return;
+    }
+    const updatedPlanes = {
+      air: [...gameState.air],
+      ground: [...gameState.ground],
+    };
     const result = update(
-      clonedState.screen,
-      clonedState.air,
-      clonedState.ground,
-      clonedState.clock,
-      clonedState.safePlanes
+      gameState.screen,
+      updatedPlanes.air,
+      updatedPlanes.ground,
+      gameState.clock,
+      gameState.safePlanes
     );
     if (result.type === "loss") {
       setLost(result);
     } else {
-      clonedState.clock = result.clock;
-      clonedState.safePlanes = result.safePlanes;
-      setGameState(clonedState);
-      setTimeout(
-        () => onTick(clonedState),
-        gameState.screen.updateSeconds * 1000
-      );
+      const updatedState = { ...gameState, ...result, ...updatedPlanes };
+      setGameState(updatedState);
     }
-  }, []);
+  }, [gameState, playing]);
 
-  const gameRef = React.useRef<HTMLDivElement>(null);
+  const checkTimeRef = React.useRef<number>(null);
+
+  const getElapsed = React.useCallback(() => {
+    return (Date.now() + skipped - startTime) / 1000;
+  }, [skipped, startTime]);
+
+  const checkTime = React.useCallback(() => {
+    if (!playing || lost !== undefined) {
+      checkTimeRef.current = null;
+      return;
+    }
+    const elapsed = getElapsed();
+    const ticks = Math.floor(elapsed / gameState.screen.updateSeconds);
+    if (ticks > gameState.clock) {
+      updateGame();
+    }
+    if (checkTimeRef.current !== null) {
+      cancelAnimationFrame(checkTimeRef.current);
+    }
+    checkTimeRef.current = requestAnimationFrame(checkTime);
+  }, [playing, getElapsed, gameState, updateGame, lost]);
+
+  React.useEffect(() => {
+    if (!playing) {
+      return;
+    }
+    if (checkTimeRef.current !== null) {
+      cancelAnimationFrame(checkTimeRef.current);
+    }
+    checkTimeRef.current = requestAnimationFrame(checkTime);
+  }, [checkTime, playing]);
+
+  const skip = React.useCallback(() => {
+    const elapsed = getElapsed();
+    const nextTick = (gameState.clock + 1) * gameState.screen.updateSeconds;
+    console.log(`skip: elapsed: ${elapsed}, nextTick: ${nextTick}`);
+    setSkipped((curr) => curr + (nextTick - elapsed) * 1000);
+  }, [getElapsed, gameState]);
+
   const [currentCommand, setCurrentCommand] = React.useState("");
   const commandProcessor = React.useRef(new CommandProcessor());
-  const handleKeyUp = React.useCallback(
-    (event: React.KeyboardEvent) => {
-      if (!playing) {
-        console.log(event.key);
-        return;
-      }
-
-      if (commandProcessor.current.processToken(event.key)) {
+  const onCommandToken = React.useCallback(
+    (token: string) => {
+      if (commandProcessor.current.processToken(token)) {
         setCurrentCommand(commandProcessor.current.display);
         const update = commandProcessor.current.applyCommand(
           gameState.screen,
@@ -90,6 +147,8 @@ export function App() {
           if (update.type === "error") {
             setCurrentCommand(update.message);
             return;
+          } else if (update.type === "skip") {
+            skip();
           } else if (update.type === "update") {
             const plane =
               gameState.air.find(
@@ -99,108 +158,162 @@ export function App() {
                 (plane) => plane.planeNo == update.plane.planeNo
               );
             if (plane) {
-              if (plane.newAltitude != update.plane.newAltitude) {
-                plane.newAltitude = update.plane.newAltitude;
-              } else if (plane.status != update.plane.status) {
-                plane.status = update.plane.status;
+              const updatedPlane = { ...plane };
+              if (updatedPlane.newAltitude != update.plane.newAltitude) {
+                updatedPlane.newAltitude = update.plane.newAltitude;
+              } else if (updatedPlane.status != update.plane.status) {
+                updatedPlane.status = update.plane.status;
               } else {
-                plane.newDir = update.plane.newDir;
-                plane.delayed = update.plane.delayed;
-                plane.delayedNo = update.plane.delayedNo;
+                updatedPlane.newDir = update.plane.newDir;
+                updatedPlane.delayed = update.plane.delayed;
+                updatedPlane.delayedNo = update.plane.delayedNo;
               }
+              const updatedPlanes = {
+                air: [...gameState.air],
+                ground: [...gameState.ground],
+              };
+              const airIndex = updatedPlanes.air.indexOf(plane);
+              if (airIndex !== -1) {
+                updatedPlanes.air[airIndex] = updatedPlane;
+              }
+              const groundIndex = updatedPlanes.ground.indexOf(plane);
+              if (groundIndex !== -1) {
+                updatedPlanes.ground[groundIndex] = updatedPlane;
+              }
+              setGameState({ ...gameState, ...updatedPlanes });
             }
           }
         }
       }
       setCurrentCommand(commandProcessor.current.display);
     },
-    [gameState, playing]
+    [gameState, skip]
   );
+
+  const handleKeyUp = React.useCallback(
+    (event: KeyboardEvent) => {
+      if (!playing || lost) {
+        return;
+      }
+
+      onCommandToken(event.key);
+    },
+    [playing, lost, onCommandToken]
+  );
+
+  React.useEffect(() => {
+    document.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      document.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [handleKeyUp]);
+
+  const tryAgain = React.useCallback(() => {
+    setPlaying(false);
+    setLost(undefined);
+    const newGameState = initGame(game, false);
+    setGameState(newGameState);
+  }, [game]);
 
   return (
     <div className="w-fit mx-auto mt-4 shadow-xl flex flex-col gap-2">
-      <h1 className="text-3xl font-medium m-4">ATC</h1>
-      <div className="flex flex-row gap-2">
-        <label htmlFor={darkId}>Dark mode</label>
-        <input
-          id={darkId}
-          type="checkbox"
-          checked={isDark}
-          onChange={() => setIsDark(!isDark)}
-        />
-      </div>
-      <div className="flex flex-row gap-2">
-        <label htmlFor={gamesId}>Games</label>
-        <select
-          id={gamesId}
-          value={game}
-          onChange={(event) => setGame(event.target.value)}
-          disabled={playing || lost !== undefined}
-        >
-          {gameNames.map((el) => (
-            <option key={el} value={el}>
-              {el}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <Button
-          onClick={() => {
-            setPlaying(true);
-            gameRef.current?.focus();
-          }}
-          disabled={playing || lost !== undefined}
-        >
-          Start
-        </Button>
-      </div>
-      <div className="grid">
-        <div
-          className="flex flex-row font-mono col-start-1 row-start-1"
-          onKeyUp={(event) => handleKeyUp(event)}
-          tabIndex={0}
-          ref={gameRef}
-        >
-          <GameScreen
-            className="m-4 rounded-lg w-2xl"
-            screen={gameState.screen}
-            gridColor="#000"
-            backgroundColor="#eee"
-            planeColor="#00F"
-            air={gameState.air}
-          />
-          <Planes className="m-4" {...gameState} />
-        </div>
-        {lost && (
-          <div className="col-start-1 row-start-1 bg-slate-700/50">
-            <div className="w-fit mt-32 mx-auto dark:bg-slate-700 flex flex-col p-8 bg-slate-100 border rounded-lg gap-4">
-              <div>
-                You lost because plane '{planeName(lost.plane)}' {lost.message}
-              </div>
-              <div>
-                You survived for {gameState.clock} ticks, and successfully
-                directed {gameState.safePlanes} planes to their destinations
-              </div>
-              <div>
-                <Button
-                  onClick={() => {
-                    setLost(undefined);
-                    setPlaying(false);
-                  }}
+      {instructions ? (
+        <>
+          <div className="flex flex-row-reverse px-4">
+            <Button onClick={() => setInstructions(false)}>Close</Button>
+          </div>
+          <Instructions className="w-3xl p-2 overflow-y-auto" />
+        </>
+      ) : (
+        <>
+          <h1 className="text-3xl font-medium m-4">ATC</h1>
+          <div className="flex flex-row gap-2">
+            <label htmlFor={darkId}>Dark mode</label>
+            <input
+              id={darkId}
+              type="checkbox"
+              checked={isDark}
+              onChange={() => setIsDark(!isDark)}
+            />
+          </div>
+          {playing ? null : (
+            <>
+              <div className="flex flex-row gap-2">
+                <label htmlFor={gamesId}>Games</label>
+                <select
+                  id={gamesId}
+                  value={game}
+                  onChange={(event) => changeGame(event.target.value)}
+                  disabled={playing || lost !== undefined}
                 >
-                  Try again
+                  {gameNames.map((el) => (
+                    <option key={el} value={el}>
+                      {el}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-row gap-4">
+                <Button
+                  onClick={() => startPlaying()}
+                  disabled={playing || lost !== undefined}
+                >
+                  Start
+                </Button>
+                <Button onClick={() => setInstructions(!instructions)}>
+                  Instructions
                 </Button>
               </div>
+            </>
+          )}
+          <div className="grid">
+            <div className="font-mono col-start-1 row-start-1 m-4 grid grid-cols-[auto_auto] gap-4">
+              <GameScreen
+                className="rounded-lg w-2xl border"
+                screen={gameState.screen}
+                gridColor={isDark ? "#282" : "#000"}
+                backgroundColor={isDark ? "#121" : "#eee"}
+                planeColor={isDark ? "#4F4" : "#00f"}
+                air={gameState.air}
+              />
+              <Planes {...gameState} />
+              <div className="flex flex-col gap-2 w-2xl">
+                <div className="flex flex-row gap-2">
+                  <div>Command:</div>
+                  <div>{currentCommand}</div>
+                </div>
+                {playing && (
+                  <CommandOptions
+                    options={commandProcessor.current.options}
+                    air={gameState.air}
+                    ground={gameState.ground}
+                    onCommand={(token) => onCommandToken(token)}
+                    skipState={commandProcessor.current.skipState}
+                  />
+                )}
+              </div>
+              <div>ATC - by Ed James</div>
             </div>
+            {lost && (
+              <div className="col-start-1 row-start-1 bg-slate-700/50">
+                <div className="w-fit mt-32 mx-auto dark:bg-slate-700 flex flex-col p-8 bg-slate-100 border rounded-lg gap-4">
+                  <div>
+                    You lost because plane '{planeName(lost.plane)}'{" "}
+                    {lost.message}
+                  </div>
+                  <div>
+                    You survived for {gameState.clock} ticks, and successfully
+                    directed {gameState.safePlanes} planes to their destinations
+                  </div>
+                  <div>
+                    <Button onClick={() => tryAgain()}>Try again</Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-      {playing && lost === undefined && (
-        <div className="flex flex-row gap-2">
-          <div>Command:</div>
-          <div>{currentCommand}</div>
-        </div>
+        </>
       )}
     </div>
   );
@@ -216,9 +329,9 @@ function initGame(name: string, start: boolean): GameState {
   }
   return {
     screen,
-    air,
-    ground,
     clock: 0,
     safePlanes: 0,
+    air,
+    ground,
   };
 }

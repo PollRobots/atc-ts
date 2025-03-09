@@ -45,12 +45,12 @@ export function GameScreen({
         />
       ));
     return (
-      <g stroke={gridColor} strokeDasharray="25 50 25 0">
+      <g stroke={gridColor ?? "currentColor"} strokeDasharray="25 50 25 0">
         {vertical}
         {horizontal}
       </g>
     );
-  }, [screen.width, screen.height]);
+  }, [screen.width, screen.height, gridColor]);
 
   return (
     <svg
@@ -253,7 +253,7 @@ function Plane({
       <circle
         cx={plane.xpos * 100}
         cy={plane.ypos * 100}
-        r={40}
+        r={50}
         fill={backgroundColor}
         stroke={plane.status === "marked" ? color : undefined}
         strokeWidth={4}
