@@ -111,11 +111,11 @@ export function Instructions({ className }: Props) {
           </pre>
           <Para>
             The first example shows a prop plane named &lsquo;B&rsquo; that is
-            flying at 4000 feet. It is low on fuel (note the &lsquo;*&rsquo;).
+            flying at 4,000 feet. It is low on fuel (note the &lsquo;*&rsquo;).
             Its destination is Airport #0. The next command it expects to do is
             circle when it reaches Beacon #1. The second example shows a jet
-            named &lsquo;g&rsquo; at 7000 feet, destined for Exit #4. It is just
-            now executing a turn to 225 degrees (South-West).
+            named &lsquo;g&rsquo; at 7,000 feet, destined for Exit #4. It is
+            just now executing a turn to 225 degrees (South-West).
           </Para>
         </Section>
         <Section title="input area">
@@ -329,7 +329,7 @@ export function Instructions({ className }: Props) {
             <Term>gtte4ab2</Term>
             <Desc>Plane G: turn towards exit #4 at beacon #2</Desc>
             <Term>ma+2</Term>
-            <Desc>Plane M: altitude: climb 2000 feet</Desc>
+            <Desc>Plane M: altitude: climb 2,000 feet</Desc>
             <Term>stq</Term>
             <Desc>Plane S: turn to 315</Desc>
             <Term>xi</Term>
@@ -338,10 +338,13 @@ export function Instructions({ className }: Props) {
         </Section>
       </Section>
       <Section title="Other information">
-        <ul>
-          <li>Jets move every update; prop planes move every other update.</li>
+        <ul className="list-disc list-outside pl-4">
+          <li>
+            Jets (lowercase) move every update; prop planes (uppercase) move
+            every other update.
+          </li>
           <li>All planes turn at most 90 degrees per movement.</li>
-          <li>Planes enter at 7000 feet and leave at 9000 feet.</li>
+          <li>Planes enter at 7,000 feet and leave at 9,000 feet.</li>
           <li>
             Planes flying at an altitude of 0 crash if they are not over an
             airport.
@@ -365,9 +368,7 @@ export function Instructions({ className }: Props) {
           This game is based on someone&rsquo;s description of the overall
           flavor of a game written for some unknown PC many years ago, maybe.
         </Para>
-      </Section>
-      <Section title="Bugs">
-        <Para>The screen sometimes refreshes after you have quit.</Para>
+        <Para>This has been ported to the web by Paul C Roberts.</Para>
       </Section>
     </div>
   );

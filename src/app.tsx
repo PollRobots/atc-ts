@@ -2,13 +2,14 @@ import React from "react";
 import { defaultGame, listGames, loadGame } from "./games";
 import { GameScreen } from "./gamescreen";
 import { Plane, ScreenDefinition } from "./model";
-import { addPlane, Loss, planeName, update } from "./update";
+import { addPlane, Loss, update } from "./update";
 import { Button } from "./controls";
 import { Planes } from "./planes";
 import { CommandProcessor } from "./input";
 import { Instructions } from "./instructions";
 import { CommandOptions } from "./commandoptions";
 import { License } from "./license";
+import { Lost } from "./lost";
 
 type GameState = {
   screen: ScreenDefinition;
@@ -88,7 +89,7 @@ export function App() {
       gameState.safePlanes
     );
     if (result.type === "loss") {
-      setLost(result);
+      setLost({ ...result, timeStamp: Date.now() });
     } else {
       const updatedState = { ...gameState, ...result, ...updatedPlanes };
       setGameState(updatedState);
@@ -332,19 +333,12 @@ export function App() {
             </div>
             {lost && (
               <div className="col-start-1 row-start-1 bg-slate-700/50">
-                <div className="w-fit mt-32 mx-auto dark:bg-slate-700 flex flex-col p-8 bg-slate-100 border rounded-lg gap-4">
-                  <div>
-                    You lost because plane '{planeName(lost.plane)}'{" "}
-                    {lost.message}
-                  </div>
-                  <div>
-                    You survived for {gameState.clock} ticks, and successfully
-                    directed {gameState.safePlanes} planes to their destinations
-                  </div>
-                  <div>
-                    <Button onClick={() => tryAgain()}>Try again</Button>
-                  </div>
-                </div>
+                <Lost
+                  {...lost}
+                  {...gameState}
+                  onClose={tryAgain}
+                  startTime={startTime}
+                />
               </div>
             )}
           </div>

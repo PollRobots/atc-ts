@@ -24,7 +24,7 @@ export function Planes({
     <div className={twMerge("flex flex-col gap-2", className)}>
       <div className="flex flex-row gap-2">
         <div>Time:</div>
-        <div className="w-8">{clock}</div>
+        <div className="w-8 text-right">{clock}</div>
         <div>Safe:</div>
         <div className="w-8">{safePlanes}</div>
       </div>
@@ -127,7 +127,7 @@ function Plane(plane: Plane) {
       </div>
       <div className="w-8">
         {plane.destType === "airport" ? "A" : "E"}
-        {plane.destNo}
+        {plane.destNo}:
       </div>
       <div>{commands.join("")}</div>
       <div

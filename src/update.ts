@@ -6,7 +6,7 @@ import {
   PlaneDest,
   ScreenDefinition,
 } from "./model";
-import { random } from "./random";
+import { randomInteger } from "./random";
 
 export function addPlane(
   screen: ScreenDefinition,
@@ -14,12 +14,12 @@ export function addPlane(
   ground: Plane[]
 ): PlaneDest | undefined {
   const status = "marked";
-  const planeType = random() % 2;
+  const planeType = randomInteger(0, 2);
 
   const numStarts = screen.exits.length + screen.airports.length;
 
   // pick a destination
-  const rnd = random() % numStarts;
+  const rnd = randomInteger(0, numStarts);
   const [destType, destNo]: [PlaneDest, number] =
     rnd < screen.exits.length
       ? ["exit", rnd]
@@ -29,7 +29,7 @@ export function addPlane(
   for (let i = 0; i < numStarts; i++) {
     let rnd2 = 0;
     // loop until we get a different start point
-    while ((rnd2 = random() % numStarts) == rnd);
+    while ((rnd2 = randomInteger(0, numStarts)) == rnd);
     const partialPlane =
       rnd2 < screen.exits.length
         ? posAndDirFromDest(screen.exits, rnd2)
@@ -123,7 +123,7 @@ let last_plane = -1;
 function nextPlane(air: Plane[], ground: Plane[]): number {
   last_plane++;
   for (let i = 0; i != 26; i++) {
-    const candidate = last_plane + i;
+    const candidate = (last_plane + i) % 26;
     if (
       air.some((plane) => plane.planeNo == candidate) ||
       ground.some((plane) => plane.planeNo == candidate)
@@ -164,6 +164,7 @@ export type Loss = {
   type: "loss";
   plane: Plane;
   message: string;
+  timeStamp: number;
 };
 
 export type Update = {
@@ -178,7 +179,7 @@ export function update(
   ground: Plane[],
   clock: number,
   safePlanes: number
-): Update | Loss {
+): Update | Omit<Loss, "timeStamp"> {
   clock += 1;
 
   // put some planes in the air
@@ -359,7 +360,7 @@ export function update(
     }
   }
 
-  if (random() % screen.newPlaneTime == 0) {
+  if (randomInteger(0, screen.newPlaneTime) == 0) {
     addPlane(screen, air, ground);
   }
 
