@@ -8,6 +8,7 @@ import { Planes } from "./planes";
 import { CommandProcessor } from "./input";
 import { Instructions } from "./instructions";
 import { CommandOptions } from "./commandoptions";
+import { License } from "./license";
 
 type GameState = {
   screen: ScreenDefinition;
@@ -39,6 +40,7 @@ export function App() {
   );
   const [playing, setPlaying] = React.useState(false);
   const [instructions, setInstructions] = React.useState(false);
+  const [license, setLicense] = React.useState(false);
   const [lost, setLost] = React.useState<Loss>();
 
   const changeGame = React.useCallback(
@@ -218,16 +220,23 @@ export function App() {
 
   return (
     <div className="w-fit mx-auto mt-4 flex flex-col gap-2">
-      {instructions ? (
+      {instructions || license ? (
         <>
           <div className="flex flex-row-reverse px-4">
-            <Button onClick={() => setInstructions(false)}>Close</Button>
+            <Button
+              onClick={() => {
+                setInstructions(false);
+                setLicense(false);
+              }}
+            >
+              Close
+            </Button>
           </div>
-          <Instructions className="w-3xl p-2 overflow-y-auto" />
+          {instructions && <Instructions className="w-3xl p-2" />}
+          {license && <License className="w-3xl p-2" />}
         </>
       ) : (
         <>
-          <h1 className="text-3xl font-medium mx-4">ATC</h1>
           {playing ? null : (
             <>
               <div className="flex flex-row gap-2 mx-4 items-baseline">
@@ -260,9 +269,10 @@ export function App() {
                 >
                   Start
                 </Button>
-                <Button onClick={() => setInstructions(!instructions)}>
+                <Button onClick={() => setInstructions(true)}>
                   Instructions
                 </Button>
+                <Button onClick={() => setLicense(true)}>License</Button>
               </div>
             </>
           )}
@@ -305,7 +315,10 @@ export function App() {
                 <div>Command:</div>
                 <div>{currentCommand}</div>
               </div>
-              <div>ATC - by Ed James</div>
+              <div>
+                <div>ATC - by Ed James</div>
+                <div className="text-sm">Ported by Paul C Roberts</div>
+              </div>
               {playing && (
                 <CommandOptions
                   className="col-start-1 col-span-2"

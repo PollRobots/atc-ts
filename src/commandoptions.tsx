@@ -1,7 +1,7 @@
 import React from "react";
 import { Plane } from "./model";
 import { planeName } from "./update";
-import { twMerge } from "tailwind-merge";
+import { twJoin, twMerge } from "tailwind-merge";
 
 type Props = {
   className?: string | undefined;
@@ -90,7 +90,9 @@ export function CommandOptions({
           }
         })}
         {hasEnter && (
-          <OptionButton token="Enter">{skipState ? "Skip" : "Go"}</OptionButton>
+          <OptionButton token="Enter">
+            {skipState ? "Skip" : "Send"}
+          </OptionButton>
         )}
         {!skipState && (
           <>
@@ -112,7 +114,14 @@ function OptionButton({ children, token }: OptionButtonProps) {
   const { onCommand } = React.useContext(CommandContext);
   return (
     <button
-      className="border rounded-md p-1 min-w-8 hover:bg-gray-100 dark:hover:bg-slate-600"
+      className={twJoin(
+        "border rounded-md p-1 min-w-8",
+        token === "Enter"
+          ? "bg-blue-500 hover:bg-blue-700 text-white dark:hover:bg-blue-400"
+          : ["Backspace", "Escape"].includes(token)
+          ? "bg-slate-500 hover:bg-slate-700 text-white dark:hover:bg-slate-400"
+          : "hover:bg-gray-100 dark:hover:bg-slate-600"
+      )}
       onClick={() => onCommand(token)}
     >
       {children}

@@ -13,7 +13,7 @@ module.exports = (env, argv) => {
     output: {
       clean: true,
       path: distPath,
-      filename: "atc-ts.[name].[contenthash].js",
+      filename: "atc.[name].[contenthash].js",
     },
 
     devServer: {
@@ -30,7 +30,7 @@ module.exports = (env, argv) => {
       historyApiFallback: true,
     },
 
-    devtool: "source-map",
+    devtool: isProduction ? undefined : "source-map",
     resolve: {
       extensions: [".ts", ".tsx", ".js"],
     },
@@ -68,13 +68,13 @@ module.exports = (env, argv) => {
     plugins: [
       new HtmlWebpackPlugin({
         title: "ATC",
-        filename: "atc-ts.html",
+        filename: "atc.html",
         template: "index.template.html",
       }),
       ...(isProduction
         ? [
             new MiniCssExtractPlugin({
-              filename: "atc-ts.[contenthash].css",
+              filename: "atc.[contenthash].css",
             }),
           ]
         : []),
