@@ -4,6 +4,7 @@ import { planeName } from "./update";
 
 type Props = {
   className?: string | undefined;
+  style?: React.CSSProperties | undefined;
   screen: ScreenDefinition;
   air: Plane[];
   gridColor?: string | undefined;
@@ -14,6 +15,7 @@ type Props = {
 
 export function GameScreen({
   className,
+  style,
   screen,
   air,
   gridColor,
@@ -56,6 +58,7 @@ export function GameScreen({
     <svg
       className={className}
       viewBox={`-50 -50 ${100 * screen.width} ${100 * screen.height}`}
+      style={style}
     >
       <rect
         x={-50}

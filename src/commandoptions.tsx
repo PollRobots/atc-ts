@@ -1,8 +1,10 @@
 import React from "react";
 import { Plane } from "./model";
 import { planeName } from "./update";
+import { twMerge } from "tailwind-merge";
 
 type Props = {
+  className?: string | undefined;
   options: { token: string; str: string }[];
   air: Plane[];
   ground: Plane[];
@@ -15,6 +17,7 @@ const CommandContext = React.createContext<Pick<Props, "onCommand">>({
 });
 
 export function CommandOptions({
+  className,
   options,
   air,
   ground,
@@ -37,7 +40,7 @@ export function CommandOptions({
     };
   }, [options]);
   return (
-    <div className="flex flex=row flex-wrap gap-2">
+    <div className={twMerge("flex flex=row flex-wrap gap-2", className)}>
       <CommandContext.Provider value={{ onCommand }}>
         {filtered.map((option, index) => {
           switch (option.token) {
@@ -109,7 +112,7 @@ function OptionButton({ children, token }: OptionButtonProps) {
   const { onCommand } = React.useContext(CommandContext);
   return (
     <button
-      className="border rounded-md p-2 min-w-8 hover:bg-gray-100 dark:hover:bg-slate-600"
+      className="border rounded-md p-1 min-w-8 hover:bg-gray-100 dark:hover:bg-slate-600"
       onClick={() => onCommand(token)}
     >
       {children}

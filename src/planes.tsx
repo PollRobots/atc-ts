@@ -9,9 +9,17 @@ type Props = {
   ground: Plane[];
   clock: number;
   safePlanes: number;
+  height: string;
 };
 
-export function Planes({ className, clock, air, ground, safePlanes }: Props) {
+export function Planes({
+  className,
+  clock,
+  air,
+  ground,
+  safePlanes,
+  height,
+}: Props) {
   return (
     <div className={twMerge("flex flex-col gap-2", className)}>
       <div className="flex flex-row gap-2">
@@ -20,22 +28,27 @@ export function Planes({ className, clock, air, ground, safePlanes }: Props) {
         <div>Safe:</div>
         <div className="w-8">{safePlanes}</div>
       </div>
-      <div className="flex flex-col rounded-md border h-full">
+      <div
+        className="flex flex-col rounded-md border"
+        style={{ height: `calc(${height} - 2rem)` }}
+      >
         <div className="flex flex-row px-1 bg-blue-300 dark:bg-blue-800 border-b">
           <div className="w-8">pl</div>
           <div className="w-8">dt</div>
           <div>command</div>
         </div>
-        <div className="text-gray-500 text-sm">Flying</div>
-        {air.map((plane) => (
-          <Plane key={`air.${plane.planeNo}`} {...plane} />
-        ))}
-        {air.length == 0 && <div>---- None ----</div>}
-        <div className="text-gray-500 text-sm">Waiting for takeoff</div>
-        {ground.map((plane) => (
-          <Plane key={`ground.${plane.planeNo}`} {...plane} />
-        ))}
-        {ground.length == 0 && <div>---- None ----</div>}
+        <div className="flex flex-col overflow-y-auto">
+          <div className="text-gray-500 text-sm">Flying</div>
+          {air.map((plane) => (
+            <Plane key={`air.${plane.planeNo}`} {...plane} />
+          ))}
+          {air.length == 0 && <div>---- None ----</div>}
+          <div className="text-gray-500 text-sm">Waiting for takeoff</div>
+          {ground.map((plane) => (
+            <Plane key={`ground.${plane.planeNo}`} {...plane} />
+          ))}
+          {ground.length == 0 && <div>---- None ----</div>}
+        </div>
       </div>
     </div>
   );

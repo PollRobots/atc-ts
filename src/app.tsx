@@ -217,7 +217,7 @@ export function App() {
   }, [game]);
 
   return (
-    <div className="w-fit mx-auto mt-4 shadow-xl flex flex-col gap-2">
+    <div className="w-fit mx-auto mt-4 flex flex-col gap-2">
       {instructions ? (
         <>
           <div className="flex flex-row-reverse px-4">
@@ -227,21 +227,20 @@ export function App() {
         </>
       ) : (
         <>
-          <h1 className="text-3xl font-medium m-4">ATC</h1>
-          <div className="flex flex-row gap-2">
-            <label htmlFor={darkId}>Dark mode</label>
-            <input
-              id={darkId}
-              type="checkbox"
-              checked={isDark}
-              onChange={() => setIsDark(!isDark)}
-            />
-          </div>
+          <h1 className="text-3xl font-medium mx-4">ATC</h1>
           {playing ? null : (
             <>
-              <div className="flex flex-row gap-2">
+              <div className="flex flex-row gap-2 mx-4 items-baseline">
+                <label htmlFor={darkId}>Dark mode</label>
+                <input
+                  id={darkId}
+                  type="checkbox"
+                  checked={isDark}
+                  onChange={() => setIsDark(!isDark)}
+                />
                 <label htmlFor={gamesId}>Games</label>
                 <select
+                  className="bg-gray-50 border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                   id={gamesId}
                   value={game}
                   onChange={(event) => changeGame(event.target.value)}
@@ -254,7 +253,7 @@ export function App() {
                   ))}
                 </select>
               </div>
-              <div className="flex flex-row gap-4">
+              <div className="flex flex-row gap-4 mx-4">
                 <Button
                   onClick={() => startPlaying()}
                   disabled={playing || lost !== undefined}
@@ -268,32 +267,55 @@ export function App() {
             </>
           )}
           <div className="grid">
-            <div className="font-mono col-start-1 row-start-1 m-4 grid grid-cols-[auto_auto] gap-4">
+            <div
+              className="font-mono col-start-1 row-start-1 m-4 grid gap-x-4"
+              style={{
+                gridTemplateColumns: `min(${
+                  (60 * gameState.screen.width) / gameState.screen.height
+                }vh,calc(98vw - 14rem)) 12rem`,
+              }}
+            >
               <GameScreen
-                className="rounded-lg w-2xl border"
+                className="rounded-lg border"
+                style={{
+                  width: `min(${
+                    (60 * gameState.screen.width) / gameState.screen.height
+                  }vh,calc(98vw - 14rem))`,
+                  height: `min(60,calc(${
+                    (98 * gameState.screen.height) / gameState.screen.width
+                  }vw - ${
+                    (14 * gameState.screen.height) / gameState.screen.width
+                  }rem))`,
+                }}
                 screen={gameState.screen}
                 gridColor={isDark ? "#282" : "#000"}
                 backgroundColor={isDark ? "#121" : "#eee"}
                 planeColor={isDark ? "#4F4" : "#00f"}
                 air={gameState.air}
               />
-              <Planes {...gameState} />
-              <div className="flex flex-col gap-2 w-2xl">
-                <div className="flex flex-row gap-2">
-                  <div>Command:</div>
-                  <div>{currentCommand}</div>
-                </div>
-                {playing && (
-                  <CommandOptions
-                    options={commandProcessor.current.options}
-                    air={gameState.air}
-                    ground={gameState.ground}
-                    onCommand={(token) => onCommandToken(token)}
-                    skipState={commandProcessor.current.skipState}
-                  />
-                )}
+              <Planes
+                {...gameState}
+                height={`min(60vh,calc(${
+                  (98 * gameState.screen.height) / gameState.screen.width
+                }vw - ${
+                  (14 * gameState.screen.height) / gameState.screen.width
+                }rem))`}
+              />
+              <div className="flex flex-row gap-2">
+                <div>Command:</div>
+                <div>{currentCommand}</div>
               </div>
               <div>ATC - by Ed James</div>
+              {playing && (
+                <CommandOptions
+                  className="col-start-1 col-span-2"
+                  options={commandProcessor.current.options}
+                  air={gameState.air}
+                  ground={gameState.ground}
+                  onCommand={(token) => onCommandToken(token)}
+                  skipState={commandProcessor.current.skipState}
+                />
+              )}
             </div>
             {lost && (
               <div className="col-start-1 row-start-1 bg-slate-700/50">
