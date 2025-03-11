@@ -38,16 +38,20 @@ export function Planes({
           <div>command</div>
         </div>
         <div className="flex flex-col overflow-y-auto">
-          <div className="text-gray-500 text-sm">Flying</div>
+          <div className="text-gray-500 text-xs sm:text-sm md:text-base lg:text-lg">
+            In flight
+          </div>
           {air.map((plane) => (
             <Plane key={`air.${plane.planeNo}`} {...plane} />
           ))}
-          {air.length == 0 && <div>---- None ----</div>}
-          <div className="text-gray-500 text-sm">Waiting for takeoff</div>
+          {air.length == 0 && <div>---- Empty ----</div>}
+          <div className="text-gray-500 text-xs sm:text-sm md:text-base lg:text-lg">
+            Waiting for takeoff
+          </div>
           {ground.map((plane) => (
             <Plane key={`ground.${plane.planeNo}`} {...plane} />
           ))}
-          {ground.length == 0 && <div>---- None ----</div>}
+          {ground.length == 0 && <div>---- Empty ----</div>}
         </div>
       </div>
     </div>

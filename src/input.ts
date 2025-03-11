@@ -15,11 +15,21 @@ type Context = {
   altitude?: number;
 };
 
+export type RuleType =
+  | "plane"
+  | "benum"
+  | "dir"
+  | "dirRel"
+  | "altitude"
+  | "cmd"
+  | "meta";
+
 type Rule = {
   token: string;
   toState: number;
   str: string;
   func?: (context: Context, input: string) => string;
+  type: RuleType;
 };
 
 type State = Rule[];
@@ -33,104 +43,122 @@ type Stack = {
 const st: State[] = [
   // 0 - specify plane
   [
-    { token: "alpha", toState: 1, str: "%c:", func: setplane },
-    { token: "Enter", toState: -1, str: "" },
-    { token: "?", toState: 12, str: " [a-z]<ret>" },
+    { token: "alpha", toState: 1, str: "%c:", func: setplane, type: "plane" },
+    { token: "Enter", toState: -1, str: "", type: "meta" },
+    { token: "?", toState: 12, str: " [a-z]<ret>", type: "meta" },
   ],
   // 1 action
   [
-    { token: "t", toState: 2, str: " turn", func: turn },
-    { token: "a", toState: 3, str: " altitude" },
-    { token: "c", toState: 4, str: " circle", func: circle },
-    { token: "m", toState: 7, str: " mark", func: mark },
-    { token: "u", toState: 7, str: " unmark", func: unmark },
-    { token: "i", toState: 7, str: " ignore", func: ignore },
-    { token: "?", toState: 12, str: " tacmui" },
+    { token: "t", toState: 2, str: " turn", func: turn, type: "cmd" },
+    { token: "a", toState: 3, str: " altitude", type: "cmd" },
+    { token: "c", toState: 4, str: " circle", func: circle, type: "cmd" },
+    { token: "m", toState: 7, str: " mark", func: mark, type: "cmd" },
+    { token: "u", toState: 7, str: " unmark", func: unmark, type: "cmd" },
+    { token: "i", toState: 7, str: " ignore", func: ignore, type: "cmd" },
+    { token: "?", toState: 12, str: " tacmui", type: "meta" },
   ],
   // 2 turn
   [
-    { token: "l", toState: 6, str: " left", func: left },
-    { token: "r", toState: 6, str: " right", func: right },
-    { token: "L", toState: 4, str: " left 90", func: leftNinety },
-    { token: "R", toState: 4, str: " right 90", func: rightNinety },
-    { token: "t", toState: 11, str: " towards" },
-    { token: "w", toState: 4, str: " to 0", func: toDir },
-    { token: "e", toState: 4, str: " to 45", func: toDir },
-    { token: "d", toState: 4, str: " to 90", func: toDir },
-    { token: "c", toState: 4, str: " to 135", func: toDir },
-    { token: "x", toState: 4, str: " to 180", func: toDir },
-    { token: "z", toState: 4, str: " to 225", func: toDir },
-    { token: "a", toState: 4, str: " to 270", func: toDir },
-    { token: "q", toState: 4, str: " to 315", func: toDir },
-    { token: "?", toState: 12, str: " lrLRt<dir>" },
+    { token: "l", toState: 6, str: " left", func: left, type: "cmd" },
+    { token: "r", toState: 6, str: " right", func: right, type: "cmd" },
+    { token: "L", toState: 4, str: " left 90", func: leftNinety, type: "cmd" },
+    {
+      token: "R",
+      toState: 4,
+      str: " right 90",
+      func: rightNinety,
+      type: "cmd",
+    },
+    { token: "t", toState: 11, str: " towards", type: "cmd" },
+    { token: "w", toState: 4, str: " to 0", func: toDir, type: "dir" },
+    { token: "e", toState: 4, str: " to 45", func: toDir, type: "dir" },
+    { token: "d", toState: 4, str: " to 90", func: toDir, type: "dir" },
+    { token: "c", toState: 4, str: " to 135", func: toDir, type: "dir" },
+    { token: "x", toState: 4, str: " to 180", func: toDir, type: "dir" },
+    { token: "z", toState: 4, str: " to 225", func: toDir, type: "dir" },
+    { token: "a", toState: 4, str: " to 270", func: toDir, type: "dir" },
+    { token: "q", toState: 4, str: " to 315", func: toDir, type: "dir" },
+    { token: "?", toState: 12, str: " lrLRt<dir>", type: "meta" },
   ],
   // 3 altitude
   [
-    { token: "+", toState: 10, str: " climb", func: climb },
-    { token: "c", toState: 10, str: " climb", func: climb },
-    { token: "-", toState: 10, str: " descend", func: descend },
-    { token: "d", toState: 10, str: " descend", func: descend },
-    { token: "number", toState: 7, str: " %c000 feet", func: setAlt },
-    { token: "?", toState: 12, str: " +-cd[0-9]" },
+    { token: "+", toState: 10, str: " climb", func: climb, type: "cmd" },
+    { token: "c", toState: 10, str: " climb", func: climb, type: "cmd" },
+    { token: "-", toState: 10, str: " descend", func: descend, type: "cmd" },
+    { token: "d", toState: 10, str: " descend", func: descend, type: "cmd" },
+    {
+      token: "number",
+      toState: 7,
+      str: " %c000 feet",
+      func: setAlt,
+      type: "altitude",
+    },
+    { token: "?", toState: 12, str: " +-cd[0-9]", type: "meta" },
   ],
   // 4 check for delay
   [
-    { token: "@", toState: 9, str: " at" },
-    { token: "a", toState: 9, str: " at" },
-    { token: "Enter", toState: -1, str: "" },
-    { token: "?", toState: 12, str: " @a<ret>" },
+    { token: "@", toState: 9, str: " at", type: "cmd" },
+    { token: "a", toState: 9, str: " at", type: "cmd" },
+    { token: "Enter", toState: -1, str: "", type: "meta" },
+    { token: "?", toState: 12, str: " @a<ret>", type: "meta" },
   ],
   // 5 delay target
   [
-    { token: "number", toState: 7, str: "%c", func: delayb },
-    { token: "?", toState: 12, str: " [0-9]" },
+    { token: "number", toState: 7, str: "%c", func: delayb, type: "benum" },
+    { token: "?", toState: 12, str: " [0-9]", type: "meta" },
   ],
   // 6  delay or direction
   [
-    { token: "@", toState: 9, str: " at" },
-    { token: "a", toState: 9, str: " at" },
-    { token: "w", toState: 4, str: " 0", func: relDir },
-    { token: "e", toState: 4, str: " 45", func: relDir },
-    { token: "d", toState: 4, str: " 90", func: relDir },
-    { token: "c", toState: 4, str: " 135", func: relDir },
-    { token: "x", toState: 4, str: " 180", func: relDir },
-    { token: "z", toState: 4, str: " 225", func: relDir },
-    { token: "a", toState: 4, str: " 270", func: relDir },
-    { token: "q", toState: 4, str: " 315", func: relDir },
-    { token: "Enter", toState: -1, str: "" },
-    { token: "?", toState: 12, str: " @a<dir><ret>" },
+    { token: "@", toState: 9, str: " at", type: "cmd" },
+    { token: "a", toState: 9, str: " at", type: "cmd" },
+    { token: "w", toState: 4, str: " 0", func: relDir, type: "dirRel" },
+    { token: "e", toState: 4, str: " 45", func: relDir, type: "dirRel" },
+    { token: "d", toState: 4, str: " 90", func: relDir, type: "dirRel" },
+    { token: "c", toState: 4, str: " 135", func: relDir, type: "dirRel" },
+    { token: "x", toState: 4, str: " 180", func: relDir, type: "dirRel" },
+    { token: "z", toState: 4, str: " 225", func: relDir, type: "dirRel" },
+    { token: "a", toState: 4, str: " 270", func: relDir, type: "dirRel" },
+    { token: "q", toState: 4, str: " 315", func: relDir, type: "dirRel" },
+    { token: "Enter", toState: -1, str: "", type: "meta" },
+    { token: "?", toState: 12, str: " @a<dir><ret>", type: "meta" },
   ],
   // 7 done
   [
-    { token: "Enter", toState: -1, str: "" },
-    { token: "?", toState: 12, str: " <ret>" },
+    { token: "Enter", toState: -1, str: "", type: "meta" },
+    { token: "?", toState: 12, str: " <ret>", type: "meta" },
   ],
   // 8 number
   [
-    { token: "number", toState: 4, str: "%c", func: benum },
-    { token: "?", toState: 12, str: " [0-9]" },
+    { token: "number", toState: 4, str: "%c", func: benum, type: "benum" },
+    { token: "?", toState: 12, str: " [0-9]", type: "meta" },
   ],
   // 9 beacon
   [
-    { token: "b", toState: 5, str: " beacon #" },
-    { token: "*", toState: 5, str: " beacon #" },
-    { token: "?", toState: 12, str: " b*" },
+    { token: "b", toState: 5, str: " beacon #", type: "cmd" },
+    { token: "*", toState: 5, str: " beacon #", type: "cmd" },
+    { token: "?", toState: 12, str: " b*", type: "meta" },
   ],
   // 10 rel alt
   [
-    { token: "number", toState: 7, str: " %c000 feet", func: setRelAlt },
-    { token: "?", toState: 12, str: " [0-9]" },
+    {
+      token: "number",
+      toState: 7,
+      str: " %c000 feet",
+      func: setRelAlt,
+      type: "altitude",
+    },
+    { token: "?", toState: 12, str: " [0-9]", type: "meta" },
   ],
   // 11 towards
   [
-    { token: "b", toState: 8, str: " beacon #", func: beacon },
-    { token: "*", toState: 8, str: " beacon #", func: beacon },
-    { token: "e", toState: 8, str: " exit #", func: exit },
-    { token: "a", toState: 8, str: " airport #", func: airport },
-    { token: "?", toState: 12, str: " b*ea" },
+    { token: "b", toState: 8, str: " beacon #", func: beacon, type: "cmd" },
+    { token: "*", toState: 8, str: " beacon #", func: beacon, type: "cmd" },
+    { token: "e", toState: 8, str: " exit #", func: exit, type: "cmd" },
+    { token: "a", toState: 8, str: " airport #", func: airport, type: "cmd" },
+    { token: "?", toState: 12, str: " b*ea", type: "meta" },
   ],
   // 12 help
-  [{ token: "", toState: -1, str: "" }],
+  [{ token: "", toState: -1, str: "", type: "meta" }],
 ];
 
 const ALPHA = "abcdefghijklmnopqrstuvwxyz";
@@ -201,11 +229,29 @@ export class CommandProcessor {
     return this.stack.map((stack) => stack.str).join("");
   }
 
-  get options(): { token: string; str: string }[] {
+  get options(): Pick<Rule, "token" | "str" | "type">[] {
     const rules = st[this.topState] ?? [];
     return rules
-      .map((rule) => ({ token: rule.token, str: rule.str }))
+      .map((rule) => ({ token: rule.token, str: rule.str, type: rule.type }))
       .filter(({ token }) => token !== "?");
+  }
+
+  get benumTarget(): "beacon" | "exit" | "airport" | undefined {
+    if (this.options.some((option) => option.type === "benum")) {
+      const target = this.stack.at(-1);
+      if (target !== undefined) {
+        switch (target.ch) {
+          case "b":
+          case "*":
+            return "beacon";
+          case "e":
+            return "exit";
+          case "a":
+            return "airport";
+        }
+      }
+    }
+    return;
   }
 
   applyCommand(

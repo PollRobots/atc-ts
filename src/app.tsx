@@ -3,7 +3,7 @@ import { defaultGame, listGames, loadGame } from "./games";
 import { GameScreen } from "./gamescreen";
 import { Plane, ScreenDefinition } from "./model";
 import { addPlane, Loss, update } from "./update";
-import { Button } from "./controls";
+import { Button, Select } from "./controls";
 import { Planes } from "./planes";
 import { CommandProcessor } from "./input";
 import { Instructions } from "./instructions";
@@ -43,6 +43,7 @@ export function App() {
   const [instructions, setInstructions] = React.useState(false);
   const [license, setLicense] = React.useState(false);
   const [lost, setLost] = React.useState<Loss>();
+  const [wantBenum, setWantBenum] = React.useState(false);
 
   const changeGame = React.useCallback(
     (update: string) => {
@@ -89,6 +90,7 @@ export function App() {
       gameState.safePlanes
     );
     if (result.type === "loss") {
+      commandProcessor.current.rezero();
       setLost({ ...result, timeStamp: Date.now() });
     } else {
       const updatedState = { ...gameState, ...result, ...updatedPlanes };
@@ -131,7 +133,6 @@ export function App() {
   const skip = React.useCallback(() => {
     const elapsed = getElapsed();
     const nextTick = (gameState.clock + 1) * gameState.screen.updateSeconds;
-    console.log(`skip: elapsed: ${elapsed}, nextTick: ${nextTick}`);
     setSkipped((curr) => curr + (nextTick - elapsed) * 1000);
   }, [getElapsed, gameState]);
 
@@ -220,7 +221,7 @@ export function App() {
   }, [game]);
 
   return (
-    <div className="w-fit mx-auto mt-4 flex flex-col gap-2">
+    <div className="w-fit mx-auto flex flex-col gap-2 text-sm  sm:text-base md:text-lg lg:text-xl">
       {instructions || license ? (
         <>
           <div className="flex flex-row-reverse px-4">
@@ -240,7 +241,7 @@ export function App() {
         <>
           {playing ? null : (
             <>
-              <div className="flex flex-row gap-2 mx-4 items-baseline">
+              <div className="flex flex-row gap-2 m-4 items-baseline">
                 <label htmlFor={darkId}>Dark mode</label>
                 <input
                   id={darkId}
@@ -249,8 +250,7 @@ export function App() {
                   onChange={() => setIsDark(!isDark)}
                 />
                 <label htmlFor={gamesId}>Games</label>
-                <select
-                  className="bg-gray-50 border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                <Select
                   id={gamesId}
                   value={game}
                   onChange={(event) => changeGame(event.target.value)}
@@ -261,7 +261,7 @@ export function App() {
                       {el}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div className="flex flex-row gap-4 mx-4">
                 <Button
@@ -283,7 +283,7 @@ export function App() {
               style={{
                 gridTemplateColumns: `min(${
                   (60 * gameState.screen.width) / gameState.screen.height
-                }vh,calc(98vw - 14rem)) 12rem`,
+                }vh,calc(98vw - 14em)) 12em`,
               }}
             >
               <GameScreen
@@ -291,18 +291,22 @@ export function App() {
                 style={{
                   width: `min(${
                     (60 * gameState.screen.width) / gameState.screen.height
-                  }vh,calc(98vw - 14rem))`,
+                  }vh,calc(98vw - 14em))`,
                   height: `min(60,calc(${
                     (98 * gameState.screen.height) / gameState.screen.width
                   }vw - ${
                     (14 * gameState.screen.height) / gameState.screen.width
-                  }rem))`,
+                  }em))`,
                 }}
                 screen={gameState.screen}
                 gridColor={isDark ? "#282" : "#000"}
                 backgroundColor={isDark ? "#121" : "#eee"}
                 planeColor={isDark ? "#4F4" : "#00f"}
                 air={gameState.air}
+                wantBenum={
+                  wantBenum ? commandProcessor.current.benumTarget : undefined
+                }
+                onBenum={(benum) => onCommandToken(benum.toString())}
               />
               <Planes
                 {...gameState}
@@ -310,7 +314,7 @@ export function App() {
                   (98 * gameState.screen.height) / gameState.screen.width
                 }vw - ${
                   (14 * gameState.screen.height) / gameState.screen.width
-                }rem))`}
+                }em))`}
               />
               <div className="flex flex-row gap-2">
                 <div>Command:</div>
@@ -318,7 +322,9 @@ export function App() {
               </div>
               <div>
                 <div>ATC - by Ed James</div>
-                <div className="text-sm">Ported by Paul C Roberts</div>
+                <div className="text-xs sm:text-sm md:text-base lg:text-lg">
+                  Ported by Paul C Roberts
+                </div>
               </div>
               {playing && (
                 <CommandOptions
@@ -328,6 +334,7 @@ export function App() {
                   ground={gameState.ground}
                   onCommand={(token) => onCommandToken(token)}
                   skipState={commandProcessor.current.skipState}
+                  getBenum={setWantBenum}
                 />
               )}
             </div>
