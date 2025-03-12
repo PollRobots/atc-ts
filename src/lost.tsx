@@ -41,12 +41,13 @@ export function Lost({
     return parts.join(", ");
   }, [startTime, timeStamp]);
   return (
-    <div className="w-fit mt-32 mx-auto dark:bg-slate-700 flex flex-col p-8 bg-slate-100 border rounded-lg gap-4">
+    <div className="w-fit h-fit m-auto dark:bg-slate-700/50 flex flex-col p-8 bg-slate-100/50 border rounded-lg gap-4">
       <div>
         You lost because plane '{planeName(plane)}' {message}
       </div>
       <div>
-        You survived for {clock} turns and played for {duration}.
+        You survived for {clock} {pluralize(clock, "turn", "turns")} and played
+        for {duration}.
       </div>
       {safePlanes > 0 ? (
         <div>

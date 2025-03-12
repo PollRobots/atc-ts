@@ -3,13 +3,15 @@ import { defaultGame, listGames, loadGame } from "./games";
 import { GameScreen } from "./gamescreen";
 import { Plane, ScreenDefinition } from "./model";
 import { addPlane, Loss, update } from "./update";
-import { Button, Select } from "./controls";
+import { Button } from "./controls";
 import { Planes } from "./planes";
 import { CommandProcessor } from "./input";
 import { Instructions } from "./instructions";
 import { CommandOptions } from "./commandoptions";
 import { License } from "./license";
 import { Lost } from "./lost";
+import { Settings, storeSettings } from "./settings";
+import { GameControls } from "./gamesettings";
 
 type GameState = {
   screen: ScreenDefinition;
@@ -19,9 +21,10 @@ type GameState = {
   ground: Plane[];
 };
 
-export function App() {
-  const [isDark, setIsDark] = React.useState(false);
-  const darkId = React.useId();
+export function App(props: Settings) {
+  const gameNames = React.useMemo(() => listGames(), []);
+  const [{ isDark, isTouch, game }, setSettings] =
+    React.useState<Settings>(props);
 
   React.useEffect(() => {
     const body = document.body;
@@ -30,9 +33,9 @@ export function App() {
     }
   }, [isDark]);
 
-  const gameNames = React.useMemo(() => listGames(), []);
-  const [game, setGame] = React.useState(gameNames[0] ?? "Unknown");
-  const gamesId = React.useId();
+  React.useEffect(() => {
+    storeSettings({ isDark, isTouch, game });
+  }, [isDark, isTouch, game]);
 
   const [startTime, setStartTime] = React.useState(0);
   const [skipped, setSkipped] = React.useState(0);
@@ -45,22 +48,16 @@ export function App() {
   const [lost, setLost] = React.useState<Loss>();
   const [wantBenum, setWantBenum] = React.useState(false);
 
-  const changeGame = React.useCallback(
-    (update: string) => {
-      if (playing) {
-        console.error(`It should not be possible to change game while playing`);
-        return;
-      }
+  React.useEffect(() => {
+    if (!playing) {
       try {
-        const newGameState = initGame(update, false);
-        setGame(update);
+        const newGameState = initGame(game, false);
         setGameState(newGameState);
       } catch (err) {
         console.error(`Error changing game to '${update}': ${err}`);
       }
-    },
-    [playing]
-  );
+    }
+  }, [playing, game]);
 
   const startPlaying = React.useCallback(() => {
     try {
@@ -69,10 +66,13 @@ export function App() {
       setSkipped(0);
       setStartTime(Date.now());
       setPlaying(true);
+      if (isTouch) {
+        document.documentElement.requestFullscreen();
+      }
     } catch (err) {
       console.error(`Error starting game '${game}': ${err}`);
     }
-  }, [game]);
+  }, [game, isTouch]);
 
   const updateGame = React.useCallback(() => {
     if (!playing) {
@@ -90,6 +90,9 @@ export function App() {
       gameState.safePlanes
     );
     if (result.type === "loss") {
+      if (document.fullscreenElement !== null) {
+        document.exitFullscreen();
+      }
       commandProcessor.current.rezero();
       setLost({ ...result, timeStamp: Date.now() });
     } else {
@@ -220,137 +223,151 @@ export function App() {
     setGameState(newGameState);
   }, [game]);
 
+  if (instructions || license) {
+    return (
+      <div className="w-fit mx-auto flex flex-col gap-2 text-sm  sm:text-base md:text-lg lg:text-xl">
+        <div className="flex flex-row-reverse px-4">
+          <Button
+            onClick={() => {
+              setInstructions(false);
+              setLicense(false);
+            }}
+          >
+            Close
+          </Button>
+        </div>
+        {instructions && <Instructions className="w-3xl p-2" />}
+        {license && <License className="w-3xl p-2" />}
+      </div>
+    );
+  }
+
+  const gameScreen = (
+    <GameScreen
+      className="rounded-lg border max-w-[100vw] max-h-[100vh]"
+      style={
+        isTouch
+          ? undefined
+          : {
+              width: `min(${
+                (60 * gameState.screen.width) / gameState.screen.height
+              }vh,calc(98vw - 14em))`,
+              height: `min(60,calc(${
+                (98 * gameState.screen.height) / gameState.screen.width
+              }vw - ${
+                (14 * gameState.screen.height) / gameState.screen.width
+              }em))`,
+            }
+      }
+      screen={gameState.screen}
+      gridColor={isDark ? "#282" : "#282"}
+      backgroundColor={isDark ? "#121" : "#eee"}
+      planeColor={isDark ? "#4F4" : "#040"}
+      air={gameState.air}
+      wantBenum={wantBenum ? commandProcessor.current.benumTarget : undefined}
+      onBenum={(benum) => onCommandToken(benum.toString())}
+    />
+  );
+
+  const gameControls = (
+    <GameControls
+      isDark={isDark}
+      isTouch={isTouch}
+      game={game}
+      gameNames={gameNames}
+      disabled={lost !== undefined}
+      onCommand={(cmd) => {
+        switch (cmd) {
+          case "play":
+            startPlaying();
+            break;
+          case "instructions":
+            setInstructions(true);
+            break;
+          case "license":
+            setLicense(true);
+            break;
+        }
+      }}
+      updateSettings={setSettings}
+    />
+  );
   return (
     <div className="w-fit mx-auto flex flex-col gap-2 text-sm  sm:text-base md:text-lg lg:text-xl">
-      {instructions || license ? (
-        <>
-          <div className="flex flex-row-reverse px-4">
-            <Button
-              onClick={() => {
-                setInstructions(false);
-                setLicense(false);
-              }}
-            >
-              Close
-            </Button>
-          </div>
-          {instructions && <Instructions className="w-3xl p-2" />}
-          {license && <License className="w-3xl p-2" />}
-        </>
-      ) : (
-        <>
-          {playing ? null : (
-            <>
-              <div className="flex flex-row gap-2 m-4 items-baseline">
-                <label htmlFor={darkId}>Dark mode</label>
-                <input
-                  id={darkId}
-                  type="checkbox"
-                  checked={isDark}
-                  onChange={() => setIsDark(!isDark)}
-                />
-                <label htmlFor={gamesId}>Games</label>
-                <Select
-                  id={gamesId}
-                  value={game}
-                  onChange={(event) => changeGame(event.target.value)}
-                  disabled={playing || lost !== undefined}
-                >
-                  {gameNames.map((el) => (
-                    <option key={el} value={el}>
-                      {el}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="flex flex-row gap-4 mx-4">
-                <Button
-                  onClick={() => startPlaying()}
-                  disabled={playing || lost !== undefined}
-                >
-                  Start
-                </Button>
-                <Button onClick={() => setInstructions(true)}>
-                  Instructions
-                </Button>
-                <Button onClick={() => setLicense(true)}>License</Button>
-              </div>
-            </>
-          )}
-          <div className="grid">
-            <div
-              className="font-mono col-start-1 row-start-1 m-4 grid gap-x-4"
-              style={{
-                gridTemplateColumns: `min(${
-                  (60 * gameState.screen.width) / gameState.screen.height
-                }vh,calc(98vw - 14em)) 12em`,
-              }}
-            >
-              <GameScreen
-                className="rounded-lg border"
-                style={{
-                  width: `min(${
-                    (60 * gameState.screen.width) / gameState.screen.height
-                  }vh,calc(98vw - 14em))`,
-                  height: `min(60,calc(${
-                    (98 * gameState.screen.height) / gameState.screen.width
-                  }vw - ${
-                    (14 * gameState.screen.height) / gameState.screen.width
-                  }em))`,
-                }}
-                screen={gameState.screen}
-                gridColor={isDark ? "#282" : "#000"}
-                backgroundColor={isDark ? "#121" : "#eee"}
-                planeColor={isDark ? "#4F4" : "#00f"}
-                air={gameState.air}
-                wantBenum={
-                  wantBenum ? commandProcessor.current.benumTarget : undefined
-                }
-                onBenum={(benum) => onCommandToken(benum.toString())}
-              />
-              <Planes
-                {...gameState}
-                height={`min(60vh,calc(${
-                  (98 * gameState.screen.height) / gameState.screen.width
-                }vw - ${
-                  (14 * gameState.screen.height) / gameState.screen.width
-                }em))`}
-              />
-              <div className="flex flex-row gap-2">
-                <div>Command:</div>
-                <div>{currentCommand}</div>
-              </div>
-              <div>
-                <div>ATC - by Ed James</div>
-                <div className="text-xs sm:text-sm md:text-base lg:text-lg">
-                  Ported by Paul C Roberts
-                </div>
-              </div>
-              {playing && (
-                <CommandOptions
-                  className="col-start-1 col-span-2"
-                  options={commandProcessor.current.options}
-                  air={gameState.air}
-                  ground={gameState.ground}
-                  onCommand={(token) => onCommandToken(token)}
-                  skipState={commandProcessor.current.skipState}
-                  getBenum={setWantBenum}
-                />
-              )}
+      {playing || isTouch ? null : gameControls}
+      <div className="grid">
+        {isTouch && (
+          <>
+            <div className="col-start-1 row-start-1 grid items-center justify-items-center w-[100vw] h-[100vh]">
+              {gameScreen}
             </div>
-            {lost && (
-              <div className="col-start-1 row-start-1 bg-slate-700/50">
-                <Lost
-                  {...lost}
-                  {...gameState}
-                  onClose={tryAgain}
-                  startTime={startTime}
-                />
-              </div>
-            )}
+          </>
+        )}
+        <div
+          className="font-mono col-start-1 row-start-1 m-4 grid gap-x-4"
+          style={
+            isTouch
+              ? {
+                  gridTemplateColumns: "1fr 18ch",
+                  gridTemplateRows: "1fr auto",
+                }
+              : {
+                  gridTemplateColumns: `min(${
+                    (60 * gameState.screen.width) / gameState.screen.height
+                  }vh,calc(98vw - 20ch)) 18ch`,
+                }
+          }
+        >
+          {isTouch ? (
+            playing ? (
+              <div className="pointer-events-none" />
+            ) : (
+              gameControls
+            )
+          ) : (
+            gameScreen
+          )}
+          <Planes
+            {...gameState}
+            height={`min(60vh,calc(${
+              (98 * gameState.screen.height) / gameState.screen.width
+            }vw - ${
+              (20 * gameState.screen.height) / gameState.screen.width
+            }ch))`}
+          />
+          <div className="flex flex-row gap-2 pointer-events-none">
+            <div className="pointer-events-none">Command:</div>
+            <div className="pointer-events-none">{currentCommand}</div>
           </div>
-        </>
-      )}
+          <div className="pointer-events-none">
+            <div className="pointer-events-none">ATC - by Ed James</div>
+            <div className="text-xs sm:text-xs md:text-sm lg:text-base pointer-events-none">
+              Port - Paul C Roberts
+            </div>
+          </div>
+          {playing && (
+            <CommandOptions
+              className="col-start-1 col-span-2"
+              options={commandProcessor.current.options}
+              air={gameState.air}
+              ground={gameState.ground}
+              onCommand={(token) => onCommandToken(token)}
+              skipState={commandProcessor.current.skipState}
+              getBenum={setWantBenum}
+            />
+          )}
+        </div>
+        {lost && (
+          <div className="col-start-1 row-start-1 bg-slate-700/50 flex">
+            <Lost
+              {...lost}
+              {...gameState}
+              onClose={tryAgain}
+              startTime={startTime}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

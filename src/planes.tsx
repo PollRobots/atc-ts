@@ -37,21 +37,21 @@ export function Planes({
           <div className="w-8">dt</div>
           <div>command</div>
         </div>
-        <div className="flex flex-col overflow-y-auto">
+        <div className="flex flex-col overflow-y-auto pointer-events-none">
           <div className="text-gray-500 text-xs sm:text-sm md:text-base lg:text-lg">
             In flight
           </div>
           {air.map((plane) => (
             <Plane key={`air.${plane.planeNo}`} {...plane} />
           ))}
-          {air.length == 0 && <div>---- Empty ----</div>}
+          {air.length == 0 && <div>----- Empty -----</div>}
           <div className="text-gray-500 text-xs sm:text-sm md:text-base lg:text-lg">
             Waiting for takeoff
           </div>
           {ground.map((plane) => (
             <Plane key={`ground.${plane.planeNo}`} {...plane} />
           ))}
-          {ground.length == 0 && <div>---- Empty ----</div>}
+          {ground.length == 0 && <div>----- Empty -----</div>}
         </div>
       </div>
     </div>
@@ -77,7 +77,7 @@ function Plane(plane: Plane) {
       commands.length === 0 &&
       (plane.status === "unmarked" || plane.status === "ignored")
     ) {
-      commands.push("---------");
+      commands.push("-----------");
     }
     return commands;
   }, [plane]);
@@ -119,7 +119,9 @@ function Plane(plane: Plane) {
         "flex flex-row px-1",
         plane.fuel < LOWFUEL
           ? "bg-red-100 dark:bg-red-900"
-          : "odd:bg-blue-50 dark:odd:bg-blue-900"
+          : plane.status === "marked"
+          ? "bg-blue-50 dark:bg-blue-800"
+          : ""
       )}
       onMouseEnter={showPopover}
       onMouseLeave={hidePopover}
