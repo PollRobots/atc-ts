@@ -304,7 +304,7 @@ export function App(props: Settings) {
           </>
         )}
         <div
-          className="font-mono col-start-1 row-start-1 m-4 grid gap-x-4"
+          className="font-mono col-start-1 row-start-1 m-4 grid gap-x-4 pointer-events-none"
           style={
             isTouch
               ? {

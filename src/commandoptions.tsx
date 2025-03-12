@@ -131,7 +131,7 @@ function OptionButton({ children, token, capitalize }: OptionButtonProps) {
   return (
     <button
       className={twJoin(
-        "border rounded-md p-1 min-w-8",
+        "border rounded-md p-1 min-w-8 pointer-events-auto",
         token === "Enter"
           ? "bg-blue-500 hover:bg-blue-700 text-white dark:hover:bg-blue-400"
           : ["Backspace", "Escape"].includes(token)
@@ -149,7 +149,7 @@ function OptionButton({ children, token, capitalize }: OptionButtonProps) {
 function AltitudeButton() {
   const { onCommand } = React.useContext(CommandContext);
   return (
-    <div className="flex flex-row border rounded-md">
+    <div className="flex flex-row border rounded-md pointer-events-auto">
       {new Array(10).fill(0).map((_, i) => (
         <div
           className={twJoin(
@@ -183,20 +183,38 @@ const DIRECTIONS: Direction[] = [
   { token: "q", degrees: 315, arrow: "🡴" },
 ];
 
+function Arrow({ angle, size }: { angle: number; size: string | number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 512 512">
+      <g transform={`rotate(${angle} 256 256)`}>
+        <path
+          d="M 112,244 L 256,100 400,244 M 256,120 V 412"
+          fill="none"
+          points="112 244 256 100 400 244"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={48}
+        />
+      </g>
+    </svg>
+  );
+}
+
 function DirButton() {
   const { onCommand } = React.useContext(CommandContext);
   return (
-    <div className="flex flex-row border rounded-md">
+    <div className="flex flex-row border rounded-md pointer-events-auto">
       {DIRECTIONS.map((dir) => (
         <div
           className={twJoin(
             "hover:bg-gray-100 dark:hover:bg-slate-600 py-1 px-2",
-            "border-r last:border-none"
+            "border-r last:border-none grid items-center justify-items-center"
           )}
           key={dir.token}
           onClick={() => onCommand(dir.token)}
         >
-          {dir.arrow}
+          <Arrow size="1.5rem" angle={dir.degrees} />
         </div>
       ))}
     </div>
